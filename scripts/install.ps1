@@ -4,6 +4,7 @@
 [CmdletBinding()]
 param(
     [string]$InstallPath = "$env:LOCALAPPDATA\LocalActivityTracker",
+    [string]$ExtensionId = "",
     [switch]$SkipBuild,
     [switch]$LaunchAfterInstall
 )
@@ -77,6 +78,24 @@ Write-Host "Binaries successfully staged to: $binDir" -ForegroundColor Green
 Write-Host "`n[4/7] Registering Chrome Native Messaging Host..." -ForegroundColor Yellow
 $hostExePath = (Join-Path $hostDir "NativeHost.exe").Replace("\", "\\")
 
+# Build allowed origins list
+$allowedOriginsList = @(
+    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
+    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
+)
+if (![string]::IsNullOrWhiteSpace($ExtensionId)) {
+    $cleanId = $ExtensionId.Trim().TrimEnd('/')
+    if ($cleanId -notmatch '^chrome-extension://') {
+        $cleanId = "chrome-extension://$cleanId/"
+    } else {
+        $cleanId = "$cleanId/"
+    }
+    if ($allowedOriginsList -notcontains $cleanId) {
+        $allowedOriginsList += $cleanId
+    }
+}
+$allowedOriginsJson = ($allowedOriginsList | ForEach-Object { "    ""$_""" }) -join ",`n"
+
 # 1. Register com.localactivitytracker.agent (used by extension)
 $manifestAgentPath = Join-Path $configDir "com.localactivitytracker.agent.json"
 $manifestAgentContent = @"
@@ -86,8 +105,7 @@ $manifestAgentContent = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
-    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
+$allowedOriginsJson
   ]
 }
 "@
@@ -105,8 +123,7 @@ $manifestNativeContent = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
-    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
+$allowedOriginsJson
   ]
 }
 "@

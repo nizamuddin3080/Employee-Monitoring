@@ -1,4 +1,9 @@
 # Fix Native Host runtime and registration for Chrome Extension
+[CmdletBinding()]
+param(
+    [string]$ExtensionId = ""
+)
+
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path "$PSScriptRoot\.."
@@ -43,6 +48,24 @@ try {
     Write-Warning "Coordinator directory is currently locked by a running instance (skipping copy): $_"
 }
 
+# Build allowed origins list
+$allowedOriginsList = @(
+    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
+    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
+)
+if (![string]::IsNullOrWhiteSpace($ExtensionId)) {
+    $cleanId = $ExtensionId.Trim().TrimEnd('/')
+    if ($cleanId -notmatch '^chrome-extension://') {
+        $cleanId = "chrome-extension://$cleanId/"
+    } else {
+        $cleanId = "$cleanId/"
+    }
+    if ($allowedOriginsList -notcontains $cleanId) {
+        $allowedOriginsList += $cleanId
+    }
+}
+$allowedOriginsJson = ($allowedOriginsList | ForEach-Object { "    ""$_""" }) -join ",`n"
+
 # 3. Create manifest for com.localactivitytracker.agent
 $hostExePath = (Join-Path $installHostDir "NativeHost.exe").Replace('\', '\\')
 $manifestAgentPath = Join-Path $configDir "com.localactivitytracker.agent.json"
@@ -53,8 +76,7 @@ $manifestAgentJson = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
-    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
+$allowedOriginsJson
   ]
 }
 "@
@@ -69,8 +91,7 @@ $manifestNativeHostJson = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
-    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
+$allowedOriginsJson
   ]
 }
 "@
