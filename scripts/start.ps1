@@ -16,6 +16,19 @@ if (-not (Test-Path $targetExe)) {
     exit 1
 }
 
+# Ensure DOTNET_ROOT is available in process and user environment
+if (-not $env:DOTNET_ROOT) {
+    $dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($dotnetCmd) {
+        $env:DOTNET_ROOT = Split-Path -Path $dotnetCmd.Source -Parent
+    } elseif (Test-Path "$env:LOCALAPPDATA\Microsoft\dotnet") {
+        $env:DOTNET_ROOT = "$env:LOCALAPPDATA\Microsoft\dotnet"
+    }
+    if ($env:DOTNET_ROOT) {
+        [System.Environment]::SetEnvironmentVariable('DOTNET_ROOT', $env:DOTNET_ROOT, 'User')
+    }
+}
+
 $workingDir = Split-Path -Path $targetExe -Parent
 Write-Host "Launching Local Activity Tracker Coordinator in interactive desktop session..." -ForegroundColor Green
 Start-Process -FilePath $targetExe -WorkingDirectory $workingDir

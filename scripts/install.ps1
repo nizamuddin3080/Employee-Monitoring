@@ -130,6 +130,19 @@ Write-Host "==========================================================" -Foregro
 Write-Host " Local Dashboard URL: http://127.0.0.1:48120" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
+# Ensure DOTNET_ROOT is registered in User environment
+if (-not $env:DOTNET_ROOT) {
+    $dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($dotnetCmd) {
+        $env:DOTNET_ROOT = Split-Path -Path $dotnetCmd.Source -Parent
+    } elseif (Test-Path "$env:LOCALAPPDATA\Microsoft\dotnet") {
+        $env:DOTNET_ROOT = "$env:LOCALAPPDATA\Microsoft\dotnet"
+    }
+}
+if ($env:DOTNET_ROOT) {
+    [System.Environment]::SetEnvironmentVariable('DOTNET_ROOT', $env:DOTNET_ROOT, 'User')
+}
+
 if ($LaunchAfterInstall) {
     Write-Host "`nLaunching Coordinator in interactive desktop session..." -ForegroundColor Green
     Start-Process -FilePath $targetExe -WorkingDirectory $coordDir
