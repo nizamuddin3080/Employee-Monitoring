@@ -219,20 +219,11 @@ public sealed class CoordinatorApiHost : IAsyncDisposable
             var profiles = await profRepo.GetAllProfilesAsync();
             var profileMap = profiles.ToDictionary(p => p.ProfileId, p => p.ProfileName, StringComparer.OrdinalIgnoreCase);
 
-            var list = new List<UrlActivitySession>();
-            if (!string.IsNullOrWhiteSpace(profileId) && !profileId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
-            {
-                var sessions = await actRepo.GetUrlSessionsInRangeAsync(profileId, startUtc, endUtc);
-                list.AddRange(sessions);
-            }
-            else
-            {
-                foreach (var prof in profiles)
-                {
-                    var sessions = await actRepo.GetUrlSessionsInRangeAsync(prof.ProfileId, startUtc, endUtc);
-                    list.AddRange(sessions);
-                }
-            }
+            var targetProfile = (!string.IsNullOrWhiteSpace(profileId) && !profileId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                ? profileId
+                : null;
+            var rawList = await actRepo.GetUrlSessionsInRangeAsync(targetProfile, startUtc, endUtc);
+            var list = rawList.ToList();
 
             if (!string.IsNullOrWhiteSpace(domain))
             {

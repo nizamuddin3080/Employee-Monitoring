@@ -91,6 +91,10 @@ async function handleNativeMessage(message: any) {
     isConnected = true;
     reconnectDelayMs = 1000; // Reset backoff on successful ack
 
+    // Reset reported state on reconnect to guarantee announcement
+    lastReportedTabId = null;
+    lastReportedUrl = null;
+
     // Immediately poll and send active tab state
     reportActiveTab();
     return;
@@ -168,7 +172,13 @@ async function reportActiveTab() {
   if (!currentProfile) return;
 
   try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    let tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (!tabs || tabs.length === 0) {
+      tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    }
+    if (!tabs || tabs.length === 0) {
+      tabs = await chrome.tabs.query({ active: true });
+    }
     const tab = tabs[0];
     if (tab && tab.id && !tab.incognito) {
       dispatchTabNavigated(tab);

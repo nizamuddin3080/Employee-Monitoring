@@ -9,7 +9,7 @@ public interface IActivityRepository
     Task UpdateUrlSessionHeartbeatAsync(string sessionId, DateTime heartbeatUtc, CancellationToken cancellationToken = default);
     Task CloseUrlSessionAsync(string sessionId, DateTime endTimeUtc, int activeDurationSeconds, string status = "COMPLETED", CancellationToken cancellationToken = default);
     Task<UrlActivitySession?> GetUrlSessionByIdAsync(string sessionId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<UrlActivitySession>> GetUrlSessionsInRangeAsync(string profileId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UrlActivitySession>> GetUrlSessionsInRangeAsync(string? profileId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
 
     // Browser Sessions (Chrome Foreground)
     Task OpenBrowserSessionAsync(BrowserSession session, CancellationToken cancellationToken = default);

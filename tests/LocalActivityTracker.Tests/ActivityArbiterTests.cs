@@ -172,4 +172,69 @@ public class ActivityArbiterTests
         Assert.NotNull(closedSession);
         Assert.True(closedSession.IsCompleted);
     }
+
+    [Fact]
+    public async Task Arbiter_ExtensionDirectWindowFocusAndTabEvents_OpensUrlSessionAuthoritatively()
+    {
+        var (_, actRepo, profRepo) = await CreateTestDatabaseAsync();
+        var profileId = Guid.NewGuid().ToString("N");
+
+        await profRepo.UpsertProfileAsync(new ChromeProfile
+        {
+            ProfileId = profileId,
+            ProfileName = "FocusTestProfile"
+        });
+
+        using var arbiter = new ActivityArbiter(actRepo, new UrlSanitizer());
+        Assert.False(arbiter.IsChromeForeground);
+
+        var now = DateTime.UtcNow;
+
+        // 1. Chrome extension sends WINDOW_FOCUSED
+        var focusMsg = IpcMessage.Create(
+            IpcMessage.EventWindowFocused,
+            profileId,
+            new { window_id = 10 });
+        focusMsg.TimestampUtc = now;
+
+        await arbiter.OnIpcMessageReceivedAsync(profileId, focusMsg);
+        Assert.True(arbiter.IsChromeForeground);
+
+        // 2. Chrome extension sends TAB_NAVIGATED
+        var tabMsg = IpcMessage.Create(
+            IpcMessage.EventTabNavigated,
+            profileId,
+            new
+            {
+                tab_id = 99,
+                window_id = 10,
+                raw_url = "https://news.ycombinator.com/item?id=12345",
+                page_title = "Hacker News"
+            });
+        tabMsg.TimestampUtc = now.AddSeconds(1);
+
+        await arbiter.OnIpcMessageReceivedAsync(profileId, tabMsg);
+
+        // Assert URL session opened
+        Assert.NotNull(arbiter.CurrentUrlSession);
+        Assert.Equal("https://news.ycombinator.com/item?id=12345", arbiter.CurrentUrlSession.SanitizedUrl);
+        Assert.Equal("ycombinator.com", arbiter.CurrentUrlSession.Domain);
+
+        // 3. Chrome extension sends WINDOW_FOCUSED with -1 (lost focus)
+        var lostFocusMsg = IpcMessage.Create(
+            IpcMessage.EventWindowFocused,
+            profileId,
+            new { window_id = -1 });
+        lostFocusMsg.TimestampUtc = now.AddSeconds(10);
+
+        await arbiter.OnIpcMessageReceivedAsync(profileId, lostFocusMsg);
+        Assert.False(arbiter.IsChromeForeground);
+        Assert.Null(arbiter.CurrentUrlSession);
+
+        var list = await actRepo.GetUrlSessionsInRangeAsync(null, now.AddMinutes(-1), now.AddMinutes(1));
+        Assert.Single(list);
+        Assert.Equal("https://news.ycombinator.com/item?id=12345", list[0].SanitizedUrl);
+        Assert.True(list[0].IsCompleted);
+        Assert.Equal(9, list[0].ActiveDurationSeconds);
+    }
 }

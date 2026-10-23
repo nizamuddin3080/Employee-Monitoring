@@ -114,11 +114,13 @@ public class ActivityRepository : IActivityRepository
         return null;
     }
 
-    public async Task<IReadOnlyList<UrlActivitySession>> GetUrlSessionsInRangeAsync(string profileId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<UrlActivitySession>> GetUrlSessionsInRangeAsync(string? profileId, DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default)
     {
         var list = new List<UrlActivitySession>();
         using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
         using var cmd = connection.CreateCommand();
+
+        bool isAll = string.IsNullOrWhiteSpace(profileId) || profileId.Equals("ALL", StringComparison.OrdinalIgnoreCase);
 
         cmd.CommandText = @"
             SELECT session_id, profile_id, window_session_id, chrome_tab_id,
@@ -126,12 +128,13 @@ public class ActivityRepository : IActivityRepository
                    end_time_utc, last_heartbeat_utc, active_duration_seconds,
                    is_completed, session_status, completeness_notes
             FROM url_activity_sessions
-            WHERE profile_id = @profile_id
+            WHERE (@is_all = 1 OR profile_id = @profile_id)
               AND start_time_utc <= @end_range
               AND (end_time_utc IS NULL OR end_time_utc >= @start_range)
             ORDER BY start_time_utc ASC;
         ";
-        cmd.Parameters.AddWithValue("@profile_id", profileId);
+        cmd.Parameters.AddWithValue("@is_all", isAll ? 1 : 0);
+        cmd.Parameters.AddWithValue("@profile_id", profileId ?? string.Empty);
         cmd.Parameters.AddWithValue("@start_range", startUtc.ToString("o"));
         cmd.Parameters.AddWithValue("@end_range", endUtc.ToString("o"));
 

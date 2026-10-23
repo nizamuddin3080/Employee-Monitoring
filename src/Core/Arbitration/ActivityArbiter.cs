@@ -176,7 +176,7 @@ public sealed class ActivityArbiter : IActivityArbiter
                     break;
 
                 case IpcMessage.EventWindowFocused:
-                    HandleWindowFocused(profileId, message);
+                    await HandleWindowFocusedAsync(profileId, message);
                     break;
             }
         }
@@ -210,6 +210,27 @@ public sealed class ActivityArbiter : IActivityArbiter
 
         _activeTabsByProfile[profileId] = tabState;
         _currentChromeProfileId = profileId;
+        _isChromeForeground = true;
+
+        // Close any non-Chrome application session since user is active in Chrome
+        if (_currentAppSession != null)
+        {
+            await CloseCurrentAppSessionAsync(message.TimestampUtc);
+        }
+
+        if (_currentBrowserSession == null)
+        {
+            _currentBrowserSession = new BrowserSession
+            {
+                SessionId = Guid.NewGuid().ToString("N"),
+                ProfileId = profileId,
+                StartTimeUtc = message.TimestampUtc,
+                DurationSeconds = 0,
+                IsCompleted = false,
+                SessionStatus = "ACTIVE"
+            };
+            await _activityRepository.OpenBrowserSessionAsync(_currentBrowserSession);
+        }
 
         // Record TabEvent audit
         await _activityRepository.InsertTabEventAsync(new TabEvent
@@ -222,8 +243,8 @@ public sealed class ActivityArbiter : IActivityArbiter
             EventTimeUtc = message.TimestampUtc
         });
 
-        // If Chrome is foregrounded and not paused, transition URL session
-        if (_isChromeForeground && !_isTrackingPaused)
+        // If not paused, transition URL session
+        if (!_isTrackingPaused)
         {
             if (_currentUrlSession != null)
             {
@@ -265,6 +286,27 @@ public sealed class ActivityArbiter : IActivityArbiter
 
         _activeTabsByProfile[profileId] = tabState;
         _currentChromeProfileId = profileId;
+        _isChromeForeground = true;
+
+        // Close any non-Chrome application session since user is active in Chrome
+        if (_currentAppSession != null)
+        {
+            await CloseCurrentAppSessionAsync(message.TimestampUtc);
+        }
+
+        if (_currentBrowserSession == null)
+        {
+            _currentBrowserSession = new BrowserSession
+            {
+                SessionId = Guid.NewGuid().ToString("N"),
+                ProfileId = profileId,
+                StartTimeUtc = message.TimestampUtc,
+                DurationSeconds = 0,
+                IsCompleted = false,
+                SessionStatus = "ACTIVE"
+            };
+            await _activityRepository.OpenBrowserSessionAsync(_currentBrowserSession);
+        }
 
         // Record TabEvent audit
         await _activityRepository.InsertTabEventAsync(new TabEvent
@@ -277,11 +319,12 @@ public sealed class ActivityArbiter : IActivityArbiter
             EventTimeUtc = message.TimestampUtc
         });
 
-        if (_isChromeForeground && !_isTrackingPaused)
+        if (!_isTrackingPaused)
         {
             if (_currentUrlSession != null)
             {
-                if (_currentUrlSession.ChromeTabId == tabId)
+                if (_currentUrlSession.ChromeTabId == tabId &&
+                    _currentUrlSession.SanitizedUrl.Equals(sanitized.SanitizedUrl, StringComparison.OrdinalIgnoreCase))
                 {
                     return;
                 }
@@ -321,9 +364,57 @@ public sealed class ActivityArbiter : IActivityArbiter
         }
     }
 
-    private void HandleWindowFocused(string profileId, IpcMessage message)
+    private async Task HandleWindowFocusedAsync(string profileId, IpcMessage message)
     {
-        _currentChromeProfileId = profileId;
+        var windowId = 0;
+        if (message.Payload.HasValue && message.Payload.Value.TryGetProperty("window_id", out var wProp))
+        {
+            windowId = wProp.GetInt32();
+        }
+
+        if (windowId == -1)
+        {
+            // Chrome lost focus
+            _isChromeForeground = false;
+            if (_currentUrlSession != null)
+            {
+                await CloseCurrentUrlSessionAsync(message.TimestampUtc);
+            }
+            if (_currentBrowserSession != null)
+            {
+                await CloseCurrentBrowserSessionAsync(message.TimestampUtc);
+            }
+        }
+        else
+        {
+            // Chrome gained focus
+            _isChromeForeground = true;
+            _currentChromeProfileId = profileId;
+
+            if (_currentAppSession != null)
+            {
+                await CloseCurrentAppSessionAsync(message.TimestampUtc);
+            }
+
+            if (_currentBrowserSession == null)
+            {
+                _currentBrowserSession = new BrowserSession
+                {
+                    SessionId = Guid.NewGuid().ToString("N"),
+                    ProfileId = profileId,
+                    StartTimeUtc = message.TimestampUtc,
+                    DurationSeconds = 0,
+                    IsCompleted = false,
+                    SessionStatus = "ACTIVE"
+                };
+                await _activityRepository.OpenBrowserSessionAsync(_currentBrowserSession);
+            }
+
+            if (!_isTrackingPaused)
+            {
+                await TryOpenActiveUrlSessionAsync(message.TimestampUtc);
+            }
+        }
     }
 
     private async Task TryOpenActiveUrlSessionAsync(DateTime timestampUtc)

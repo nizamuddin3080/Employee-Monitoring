@@ -169,6 +169,13 @@ public sealed class CoordinatorApp : IDisposable
         {
             _focusMonitor.Start();
             LogInfo("Win32 desktop focus monitor started successfully (SetWinEventHook EVENT_SYSTEM_FOREGROUND).");
+
+            // Capture initial foreground window immediately at startup
+            var initialForeground = _focusMonitor.GetCurrentForeground();
+            if (initialForeground != null)
+            {
+                OnForegroundChanged(this, initialForeground);
+            }
         }
         catch (Exception ex)
         {
