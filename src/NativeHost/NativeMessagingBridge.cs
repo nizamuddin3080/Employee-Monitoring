@@ -255,39 +255,73 @@ public sealed class NativeMessagingBridge : IDisposable
 
     private void StartReconnectLoop()
     {
-        if (_reconnectTask != null && !_reconnectTask.IsCompleted)
+        lock (_lock)
         {
-            return;
-        }
-
-        _reconnectTask = Task.Run(async () =>
-        {
-            var delayMs = 1000;
-            while (_isRunning && !IsConnectedToCoordinator && _bridgeCts != null && !_bridgeCts.IsCancellationRequested)
+            if (_reconnectTask != null && !_reconnectTask.IsCompleted)
             {
-                try
-                {
-                    await Task.Delay(delayMs, _bridgeCts.Token);
-                    if (_pipeClient != null && await _pipeClient.ConnectAsync(TimeSpan.FromSeconds(1), _bridgeCts.Token))
-                    {
-                        await _pipeClient.PerformHandshakeAsync(new IpcHandshakePayload
-                        {
-                            ProfileName = _profileName,
-                            ExtensionVersion = _extensionVersion,
-                            NativeHostPid = Environment.ProcessId
-                        }, _bridgeCts.Token);
+                return;
+            }
 
-                        await FlushOfflineBufferAsync(_bridgeCts.Token);
+            _reconnectTask = Task.Run(async () =>
+            {
+                var delayMs = 1000;
+                while (_isRunning && _bridgeCts != null && !_bridgeCts.IsCancellationRequested)
+                {
+                    if (IsConnectedToCoordinator)
+                    {
                         break;
                     }
+
+                    try
+                    {
+                        await Task.Delay(delayMs, _bridgeCts.Token);
+
+                        _pipeClient?.Dispose();
+                        var client = new NamedPipeIpcClient(_profileId, _customPipeName, _customSessionId);
+                        client.MessageReceived += OnCoordinatorMessageReceived;
+                        client.Disconnected += OnCoordinatorDisconnected;
+                        _pipeClient = client;
+
+                        var connected = await client.ConnectAsync(TimeSpan.FromSeconds(2), _bridgeCts.Token);
+                        if (connected)
+                        {
+                            var ack = await client.PerformHandshakeAsync(new IpcHandshakePayload
+                            {
+                                ProfileName = _profileName,
+                                ExtensionVersion = _extensionVersion,
+                                NativeHostPid = Environment.ProcessId
+                            }, _bridgeCts.Token);
+
+                            if (ack != null && ack.Status.Equals("CONNECTED", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var notifyObj = new
+                                {
+                                    type = "COORDINATOR_STATUS_CHANGED",
+                                    payload = new
+                                    {
+                                        status = "CONNECTED",
+                                        profile_id = _profileId
+                                    }
+                                };
+                                await WriteToStdioAsync(JsonSerializer.Serialize(notifyObj), _bridgeCts.Token);
+
+                                await FlushOfflineBufferAsync(_bridgeCts.Token);
+                                break;
+                            }
+                            else
+                            {
+                                await client.DisconnectAsync();
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Backoff up to 5 seconds
+                        delayMs = Math.Min(delayMs * 2, 5000);
+                    }
                 }
-                catch
-                {
-                    // Backoff up to 10 seconds
-                    delayMs = Math.Min(delayMs * 2, 10000);
-                }
-            }
-        });
+            });
+        }
     }
 
     private async Task SendOrBufferIpcMessageAsync(IpcMessage message, CancellationToken cancellationToken)
@@ -365,6 +399,27 @@ public sealed class NativeMessagingBridge : IDisposable
 
     private void OnCoordinatorDisconnected(object? sender, EventArgs e)
     {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var notifyObj = new
+                {
+                    type = "COORDINATOR_STATUS_CHANGED",
+                    payload = new
+                    {
+                        status = "DISCONNECTED",
+                        profile_id = _profileId
+                    }
+                };
+                await WriteToStdioAsync(JsonSerializer.Serialize(notifyObj), CancellationToken.None);
+            }
+            catch
+            {
+                // Suppress stdio write error during disconnect
+            }
+        });
+
         StartReconnectLoop();
     }
 

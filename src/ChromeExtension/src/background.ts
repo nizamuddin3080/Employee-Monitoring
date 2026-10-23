@@ -87,16 +87,28 @@ function postNativeMessage(message: any) {
 async function handleNativeMessage(message: any) {
   if (!message || typeof message !== 'object') return;
 
+  if (message.type === 'COORDINATOR_STATUS_CHANGED') {
+    isConnected = message.payload?.status === 'CONNECTED';
+    if (isConnected) {
+      lastReportedTabId = null;
+      lastReportedUrl = null;
+      reportActiveTab();
+    }
+    return;
+  }
+
   if (message.type === 'CLIENT_HELLO_ACK') {
-    isConnected = true;
+    isConnected = message.payload?.status === 'CONNECTED';
     reconnectDelayMs = 1000; // Reset backoff on successful ack
 
-    // Reset reported state on reconnect to guarantee announcement
-    lastReportedTabId = null;
-    lastReportedUrl = null;
+    if (isConnected) {
+      // Reset reported state on reconnect to guarantee announcement
+      lastReportedTabId = null;
+      lastReportedUrl = null;
 
-    // Immediately poll and send active tab state
-    reportActiveTab();
+      // Immediately poll and send active tab state
+      reportActiveTab();
+    }
     return;
   }
 
@@ -221,6 +233,9 @@ function dispatchTabNavigated(tab: chrome.tabs.Tab) {
 
 // 1. Tab activated (tab switch)
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  if (!nativePort) {
+    connectToNativeHost();
+  }
   if (!currentProfile) return;
 
   try {
@@ -284,6 +299,9 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 
 // 4. Window focus changed
 chrome.windows.onFocusChanged.addListener((windowId) => {
+  if (!nativePort) {
+    connectToNativeHost();
+  }
   if (!currentProfile) return;
 
   postNativeMessage({
@@ -303,6 +321,9 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
 // 5. Popup messaging communication
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_CONNECTION_STATUS') {
+    if (!nativePort || !isConnected) {
+      connectToNativeHost();
+    }
     sendResponse({
       connected: isConnected,
       profileId: currentProfile?.profileId,
