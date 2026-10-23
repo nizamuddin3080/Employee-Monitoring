@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Clock, ShieldCheck, ChevronDown, ChevronRight, Laptop } from 'lucide-react';
+import { Layers, Clock, ShieldCheck, ChevronDown, ChevronRight, Laptop, RotateCw } from 'lucide-react';
 import { api, ApplicationUsageGroup } from '../api/client';
 
 export const ApplicationsView: React.FC = () => {
@@ -7,20 +7,22 @@ export const ApplicationsView: React.FC = () => {
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchApps = async () => {
-      setIsLoading(true);
-      try {
-        const data = await api.getApplications();
-        setApps(data);
-      } catch (err) {
-        console.error('Failed to load application usage data:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchApps = async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.getApplications();
+      setApps(data);
+    } catch (err) {
+      console.error('Failed to load application usage data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchApps();
+    const interval = setInterval(fetchApps, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const formatDuration = (seconds: number) => {

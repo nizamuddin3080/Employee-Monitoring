@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ExternalLink, Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { Search, Filter, ExternalLink, Calendar, ChevronLeft, ChevronRight, Clock, RotateCw } from 'lucide-react';
 import { api, ActivityRecord, ChromeProfileRecord } from '../api/client';
 
 interface ActivityViewProps {
@@ -35,6 +35,8 @@ export const ActivityView: React.FC<ActivityViewProps> = ({ profiles }) => {
 
   useEffect(() => {
     fetchRecords();
+    const interval = setInterval(fetchRecords, 5000);
+    return () => clearInterval(interval);
   }, [page, selectedProfile]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -97,6 +99,16 @@ export const ActivityView: React.FC<ActivityViewProps> = ({ profiles }) => {
               ))}
             </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => fetchRecords()}
+            title="Refresh Activity Log"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 shrink-0 border border-slate-700"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-400' : ''}`} />
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
 
