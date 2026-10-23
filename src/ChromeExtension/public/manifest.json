@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Local Activity Tracker",
+  "version": "1.0.0",
+  "description": "Local-only activity and duration tracker for enrolled Chrome profiles.",
+  "permissions": [
+    "tabs",
+    "windows",
+    "storage",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Local Activity Tracker Profile Status"
+  }
+}

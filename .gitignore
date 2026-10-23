@@ -1,0 +1,39 @@
+# Build output
+**/bin/
+**/obj/
+**/dist/
+**/node_modules/
+*.tsbuildinfo
+
+# Local databases and runtime state
+*.db
+*.db-wal
+*.db-shm
+*.db-*
+*.log
+logs/
+backups/
+exports/
+screenshots/
+data/
+
+# Security and local secrets
+auth.token
+.env
+.env.*
+*.local
+
+# IDE and tooling
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

@@ -1,0 +1,9 @@
+{
+  "name": "com.localactivitytracker.agent",
+  "description": "Local Activity Tracker Chrome Native Messaging Host",
+  "path": "NativeHost.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}
