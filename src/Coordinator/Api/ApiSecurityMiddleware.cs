@@ -119,10 +119,17 @@ public sealed class ApiSecurityMiddleware
             var isBootstrapEndpoint = path.Equals("/api/auth/token", StringComparison.OrdinalIgnoreCase) ||
                                      path.Equals("/api/auth/bootstrap", StringComparison.OrdinalIgnoreCase);
 
-            if (!isBootstrapEndpoint)
+            // Allow screenshot image rendering in <img> tags from authenticated loopback SPA
+            var isScreenshotImageEndpoint = path.StartsWith("/api/screenshots/", StringComparison.OrdinalIgnoreCase) &&
+                                            path.EndsWith("/image", StringComparison.OrdinalIgnoreCase);
+
+            if (!isBootstrapEndpoint && !isScreenshotImageEndpoint)
             {
                 var authHeader = context.Request.Headers.Authorization.ToString();
-                if (!_tokenProvider.ValidateToken(authHeader))
+                var queryToken = context.Request.Query["token"].ToString();
+                var tokenToTest = !string.IsNullOrWhiteSpace(authHeader) ? authHeader : queryToken;
+
+                if (!_tokenProvider.ValidateToken(tokenToTest))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                     await context.Response.WriteAsync("Unauthorized: Missing or invalid capability bearer token.");

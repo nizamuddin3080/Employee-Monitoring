@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Trash2, X, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Camera, Trash2, X, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, RefreshCw, Folder } from 'lucide-react';
 import { api, ScreenshotRecord, ChromeProfileRecord } from '../api/client';
 
 interface ScreenshotsViewProps {
@@ -34,6 +34,8 @@ export const ScreenshotsView: React.FC<ScreenshotsViewProps> = ({ profiles }) =>
 
   useEffect(() => {
     fetchScreenshots();
+    const interval = setInterval(fetchScreenshots, 10000);
+    return () => clearInterval(interval);
   }, [page, selectedProfile]);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -61,7 +63,13 @@ export const ScreenshotsView: React.FC<ScreenshotsViewProps> = ({ profiles }) =>
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center space-x-2">
           <Camera className="w-5 h-5 text-amber-400" />
-          <h2 className="text-sm font-bold text-white">Local Visible-Tab Screenshot Gallery</h2>
+          <div>
+            <h2 className="text-sm font-bold text-white">Local Visible-Tab Screenshot Gallery</h2>
+            <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 mt-0.5">
+              <Folder className="w-3.5 h-3.5 text-slate-500" />
+              <span>Saved on disk at: <code className="text-amber-300 font-mono text-[10px]">%LOCALAPPDATA%\LocalActivityTracker\screenshots\</code></span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -80,6 +88,17 @@ export const ScreenshotsView: React.FC<ScreenshotsViewProps> = ({ profiles }) =>
               </option>
             ))}
           </select>
+
+          <button
+            type="button"
+            onClick={fetchScreenshots}
+            disabled={isLoading}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors shrink-0 disabled:opacity-50"
+            title="Refresh screenshots list"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-amber-400' : ''}`} />
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
 
