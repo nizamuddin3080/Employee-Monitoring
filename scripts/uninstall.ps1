@@ -36,8 +36,8 @@ if (Test-Path $regPath) {
     Write-Host "Registry key was not present." -ForegroundColor Gray
 }
 
-# Step 3: Remove Windows Startup shortcut
-Write-Host "`n[3/5] Removing Windows Startup shortcut..." -ForegroundColor Yellow
+# Step 3: Remove Windows Startup shortcut and Scheduled Task
+Write-Host "`n[3/5] Removing Windows Startup shortcut and Scheduled Task..." -ForegroundColor Yellow
 $startupFolder = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::Startup)
 $shortcutPath = Join-Path $startupFolder "LocalActivityTracker.lnk"
 if (Test-Path $shortcutPath) {
@@ -45,6 +45,13 @@ if (Test-Path $shortcutPath) {
     Write-Host "Startup shortcut removed: $shortcutPath" -ForegroundColor Green
 } else {
     Write-Host "Startup shortcut was not present." -ForegroundColor Gray
+}
+
+try {
+    Unregister-ScheduledTask -TaskName "LocalActivityTracker" -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+    Write-Host "Scheduled task unregistered: LocalActivityTracker" -ForegroundColor Green
+} catch {
+    # Suppress task unregister errors
 }
 
 # Step 4: Remove binaries and staged extension

@@ -159,6 +159,7 @@ All lifecycle scripts are located in the `scripts\` directory:
 | Script | Purpose |
 | :--- | :--- |
 | `.\scripts\install.ps1` | Full installer: builds binaries, registers registry keys, sets up auto-start, and stages assets. |
+| `.\scripts\register-autostart.ps1` | Registers Windows Scheduled Task watchdog and startup shortcut for 100% automated background execution. |
 | `.\scripts\start.ps1` | Manually launches `Coordinator.exe` in the interactive desktop session. |
 | `.\scripts\stop.ps1` | Gracefully terminates any running Coordinator and NativeHost processes. |
 | `.\scripts\check-activity.ps1` | Displays live database stats, active URLs, domains, and profile connection statuses. |

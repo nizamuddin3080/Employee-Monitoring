@@ -134,8 +134,8 @@ Set-ItemProperty -Path $regNativePath -Name "(Default)" -Value $manifestNativePa
 
 Write-Host "Native host registered in registry under .agent and .native_host" -ForegroundColor Green
 
-# Step 5: Create Windows Startup Shortcut
-Write-Host "`n[5/7] Creating Windows Interactive Startup Shortcut..." -ForegroundColor Yellow
+# Step 5: Create Windows Startup Shortcut and Register Scheduled Task
+Write-Host "`n[5/7] Configuring Windows Auto-Start and Watchdog..." -ForegroundColor Yellow
 $startupFolder = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::Startup)
 $shortcutPath = Join-Path $startupFolder "LocalActivityTracker.lnk"
 $targetExe = Join-Path $coordDir "Coordinator.exe"
@@ -148,6 +148,17 @@ $shortcut.WindowStyle = 7 # Minimized
 $shortcut.Description = "Local Activity Tracker Interactive Coordinator"
 $shortcut.Save()
 Write-Host "Startup shortcut created at: $shortcutPath" -ForegroundColor Green
+
+# Register Windows Scheduled Task (Watchdog with auto-restart on logon & failure)
+try {
+    $action = New-ScheduledTaskAction -Execute $targetExe -WorkingDirectory $coordDir
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+    Register-ScheduledTask -TaskName "LocalActivityTracker" -Action $action -Trigger $trigger -Settings $settings -User $env:USERNAME -Force | Out-Null
+    Write-Host "Windows Scheduled Task registered (auto-starts on logon and auto-restarts on crash)" -ForegroundColor Green
+} catch {
+    Write-Warning "Could not register scheduled task: $_"
+}
 
 # Step 6: Enforce Strict NTFS Filesystem ACLs
 Write-Host "`n[6/7] Enforcing strict NTFS ACLs (Current User + SYSTEM only)..." -ForegroundColor Yellow
