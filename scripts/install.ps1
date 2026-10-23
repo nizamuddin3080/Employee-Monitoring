@@ -51,10 +51,14 @@ $backupsDir = Join-Path $InstallPath "backups"
 # Step 3: Copy compiled binaries
 Write-Host "`n[3/7] Copying executables and static assets..." -ForegroundColor Yellow
 
-$coordSource = Join-Path $root "src\Coordinator\bin\Release\net8.0"
-$hostSource = Join-Path $root "src\NativeHost\bin\Release\net8.0"
-$dashSource = Join-Path $root "src\LocalDashboard\dist"
-$extSource = Join-Path $root "src\ChromeExtension\dist"
+$coordSource = Join-Path $root "src\Coordinator\bin\Release\net8.0\win-x64\publish"
+if (-not (Test-Path $coordSource)) {
+    $coordSource = Join-Path $root "src\Coordinator\bin\Release\net8.0"
+}
+$hostSource = Join-Path $root "src\NativeHost\bin\Release\net8.0\win-x64\publish"
+if (-not (Test-Path $hostSource)) {
+    $hostSource = Join-Path $root "src\NativeHost\bin\Release\net8.0"
+}
 
 Copy-Item -Path "$coordSource\*" -Destination $coordDir -Recurse -Force
 Copy-Item -Path "$hostSource\*" -Destination $hostDir -Recurse -Force
@@ -69,12 +73,31 @@ Copy-Item -Path "$extSource\*" -Destination $extDir -Recurse -Force
 
 Write-Host "Binaries successfully staged to: $binDir" -ForegroundColor Green
 
-# Step 4: Generate and register Chrome Native Messaging Host manifest
+# Step 4: Generate and register Chrome Native Messaging Host manifests
 Write-Host "`n[4/7] Registering Chrome Native Messaging Host..." -ForegroundColor Yellow
 $hostExePath = (Join-Path $hostDir "NativeHost.exe").Replace("\", "\\")
-$manifestPath = Join-Path $configDir "com.localactivitytracker.native_host.json"
 
-$manifestContent = @"
+# 1. Register com.localactivitytracker.agent (used by extension)
+$manifestAgentPath = Join-Path $configDir "com.localactivitytracker.agent.json"
+$manifestAgentContent = @"
+{
+  "name": "com.localactivitytracker.agent",
+  "description": "Local Activity Tracker Chrome Native Messaging Host",
+  "path": "$hostExePath",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}
+"@
+[System.IO.File]::WriteAllText($manifestAgentPath, $manifestAgentContent, [System.Text.Encoding]::UTF8)
+$regAgentPath = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.localactivitytracker.agent"
+if (-not (Test-Path $regAgentPath)) { New-Item -Path $regAgentPath -Force | Out-Null }
+Set-ItemProperty -Path $regAgentPath -Name "(Default)" -Value $manifestAgentPath -Force
+
+# 2. Register com.localactivitytracker.native_host
+$manifestNativePath = Join-Path $configDir "com.localactivitytracker.native_host.json"
+$manifestNativeContent = @"
 {
   "name": "com.localactivitytracker.native_host",
   "description": "Local Activity Tracker Chrome Native Messaging Host",
@@ -85,16 +108,12 @@ $manifestContent = @"
   ]
 }
 "@
+[System.IO.File]::WriteAllText($manifestNativePath, $manifestNativeContent, [System.Text.Encoding]::UTF8)
+$regNativePath = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.localactivitytracker.native_host"
+if (-not (Test-Path $regNativePath)) { New-Item -Path $regNativePath -Force | Out-Null }
+Set-ItemProperty -Path $regNativePath -Name "(Default)" -Value $manifestNativePath -Force
 
-[System.IO.File]::WriteAllText($manifestPath, $manifestContent, [System.Text.Encoding]::UTF8)
-
-# Register in Windows Registry (HKCU)
-$regPath = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.localactivitytracker.native_host"
-if (-not (Test-Path $regPath)) {
-    New-Item -Path $regPath -Force | Out-Null
-}
-Set-ItemProperty -Path $regPath -Name "(Default)" -Value $manifestPath -Force
-Write-Host "Native host registered in registry at: $regPath" -ForegroundColor Green
+Write-Host "Native host registered in registry under .agent and .native_host" -ForegroundColor Green
 
 # Step 5: Create Windows Startup Shortcut
 Write-Host "`n[5/7] Creating Windows Interactive Startup Shortcut..." -ForegroundColor Yellow

@@ -17,6 +17,10 @@ Write-Host 'Running .NET Test Suite...'
 dotnet test .\tests\LocalActivityTracker.Tests\LocalActivityTracker.Tests.csproj -c Release --no-build
 if ($LASTEXITCODE -ne 0) { throw '.NET tests failed' }
 
+Write-Host 'Publishing self-contained Windows executables...'
+dotnet publish .\src\NativeHost\NativeHost.csproj -c Release -r win-x64 --self-contained true
+dotnet publish .\src\Coordinator\Coordinator.csproj -c Release -r win-x64 --self-contained true
+
 foreach ($dir in @('src/ChromeExtension','src/LocalDashboard')) {
   Push-Location $dir
   try {
