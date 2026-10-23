@@ -31,5 +31,5 @@ if (-not $env:DOTNET_ROOT) {
 
 $workingDir = Split-Path -Path $targetExe -Parent
 Write-Host "Launching Local Activity Tracker Coordinator in interactive desktop session..." -ForegroundColor Green
-Start-Process -FilePath $targetExe -WorkingDirectory $workingDir
+Start-Process -FilePath $targetExe -WorkingDirectory $workingDir -WindowStyle Hidden
 Write-Host "Coordinator running. Local Dashboard available at: http://127.0.0.1:48120" -ForegroundColor Cyan

@@ -144,6 +144,7 @@ $wshShell = New-Object -ComObject WScript.Shell
 $shortcut = $wshShell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = $targetExe
 $shortcut.WorkingDirectory = $coordDir
+$shortcut.WindowStyle = 7 # Minimized
 $shortcut.Description = "Local Activity Tracker Interactive Coordinator"
 $shortcut.Save()
 Write-Host "Startup shortcut created at: $shortcutPath" -ForegroundColor Green
@@ -183,5 +184,5 @@ if ($env:DOTNET_ROOT) {
 
 if ($LaunchAfterInstall) {
     Write-Host "`nLaunching Coordinator in interactive desktop session..." -ForegroundColor Green
-    Start-Process -FilePath $targetExe -WorkingDirectory $coordDir
+    Start-Process -FilePath $targetExe -WorkingDirectory $coordDir -WindowStyle Hidden
 }
