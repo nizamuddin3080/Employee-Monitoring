@@ -12,7 +12,7 @@
 [![Frontend](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](#technology-stack)
 [![Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](#multi-profile-chrome-extension)
 [![Database](https://img.shields.io/badge/SQLite-WAL%20Mode-003B57?logo=sqlite&logoColor=white)](#persistence-layer)
-[![Tests](https://img.shields.io/badge/Tests-114%20Passing-brightgreen?logo=xunit&logoColor=white)](#automated-testing--verification)
+[![Tests](https://img.shields.io/badge/Tests-115%20Passing-brightgreen?logo=xunit&logoColor=white)](#automated-testing--verification)
 [![Telemetry](https://img.shields.io/badge/Telemetry-0%25%20Offline-success)](#privacy--security-invariants)
 [![Privacy](https://img.shields.io/badge/Window%20Titles-Strictly%20Zero-blueviolet)](#privacy--security-invariants)
 
@@ -42,81 +42,130 @@ Traditional monitoring agents rely on fragile Session 0 services, leak corporate
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Complete Installation & Setup Guide
 
-### Prerequisites
-- **Operating System:** Windows 10 (Build 19041+) or Windows 11 (64-bit)
-- **Runtime:** [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- **Node.js:** v18.0+ / v20.0+ / v24.0+ & npm (for building web assets)
-- **Browser:** Google Chrome (any recent stable release)
+Follow this guide to install and configure the tracker on any Windows 10 or 11 computer. **The setup is a one-time process — once installed, the system starts automatically with Windows on every boot and requires zero daily restarts.**
 
 ---
 
-### Installation via PowerShell (One-Click)
+### 1. Prerequisites
 
-Open PowerShell as your current interactive Windows user (no administrative elevation required):
+Before installing, ensure the host machine has the following installed:
+
+| Requirement | Supported Version | Download Link | Notes |
+| :--- | :--- | :--- | :--- |
+| **Operating System** | Windows 10 (Build 19041+) / Windows 11 (64-bit) | — | Must be an interactive user session (Session 1+) |
+| **.NET SDK** | .NET 8.0 SDK (x64) | [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download/dotnet/8.0) | Required to build & run Coordinator/NativeHost |
+| **Node.js & npm** | Node.js v18.x, v20.x, or v22.x+ | [nodejs.org](https://nodejs.org/) | Required to bundle React SPA and Chrome Extension |
+| **Browser** | Google Chrome (Stable) | [google.com/chrome](https://www.google.com/chrome/) | Target browser for multi-profile tracking |
+
+---
+
+### 2. Step 1: Clone the Repository
+
+Open Windows PowerShell (Run as normal user — **no administrator privileges required**):
 
 ```powershell
-# 1. Clone the repository
 git clone https://github.com/nizamuddin3080/Employee-Monitoring.git
 cd Employee-Monitoring
-
-# 2. Execute the one-click installer
-.\scripts\install.ps1 -LaunchAfterInstall
 ```
-
-The installer automatically:
-1. Compiles the .NET 8 solution in Release mode.
-2. Compiles TypeScript and bundles the Chrome Extension and React Dashboard.
-3. Stages production binaries to `%LOCALAPPDATA%\LocalActivityTracker\bin`.
-4. Registers the Chrome Native Messaging host in `HKCU\Software\Google\Chrome\NativeMessagingHosts`.
-5. Creates an interactive Windows Startup shortcut so tracking starts on user login.
-6. Hardens NTFS ACLs to isolate the data directory exclusively to your Windows user and `SYSTEM`.
-7. Launches `Coordinator.exe` in the interactive desktop session with its system tray icon.
 
 ---
 
-### Service Lifecycle Controls
+### 3. Step 2: Run the One-Click Installer
+
+Execute the unified installer script:
 
 ```powershell
-# Start the Coordinator in background
-.\scripts\start.ps1
-
-# Stop running Coordinator processes
-.\scripts\stop.ps1
-
-# Build the entire solution and execute all 114 tests
-.\build.ps1
-
-# Clean uninstall (add -PurgeData to permanently wipe local databases and screenshots)
-.\scripts\uninstall.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 -LaunchAfterInstall
 ```
+
+#### What the installer does automatically:
+1. **Compiles full-stack binaries:** Builds Core, Coordinator, NativeHost, Tests, React Dashboard, and Chrome Extension.
+2. **Runs test suite:** Verifies all **115 test cases** pass before staging files.
+3. **Stages binaries:** Deploys self-contained executables and web assets to `%LOCALAPPDATA%\LocalActivityTracker\`.
+4. **Registers Chrome Native Messaging:** Writes host manifests and registers both `.agent` and `.native_host` in Windows Registry (`HKCU:\Software\Google\Chrome\NativeMessagingHosts`).
+5. **Configures Auto-Start on Windows Boot:** Creates a shortcut (`LocalActivityTracker.lnk`) in the user's Startup folder (`shell:startup`) so tracking resumes automatically whenever the PC is powered on.
+6. **Hardens NTFS ACLs:** Locks database and screenshot folders strictly to the current Windows user and `SYSTEM`.
+7. **Launches Coordinator:** Starts `Coordinator.exe` in the interactive desktop session with its system tray icon.
 
 ---
 
-## 🧩 Multi-Profile Chrome Extension
+### 4. Step 3: Enroll Chrome Profile(s)
 
-To track multiple independent Chrome profiles (e.g. *Personal*, *Work*, *Client Admin*) on the same workstation:
+1. Open **Google Chrome** in the profile you wish to monitor.
+2. Navigate to `chrome://extensions/` in the address bar.
+3. Toggle ON **Developer mode** in the upper-right corner.
+4. Click **Load unpacked** in the top-left corner.
+5. Select the staged extension folder:
+   ```text
+   C:\Users\<YourUsername>\AppData\Local\LocalActivityTracker\extension
+   ```
+   *(Or paste `%LOCALAPPDATA%\LocalActivityTracker\extension` into the file picker)*.
+6. Pin the **Local Activity Tracker** extension icon to your Chrome toolbar.
+7. Click the extension icon — verify the status pill displays a green **CONNECTED** badge with an enrolled Profile ID.
 
-```
-┌────────────────────────────────────────────────────────┐
-│ Chrome Extension Multi-Profile Setup                  │
-├────────────────────────────────────────────────────────┤
-│ 1. Open Google Chrome in the profile to monitor.       │
-│ 2. Navigate to chrome://extensions/                   │
-│ 3. Toggle ON "Developer mode" (top right).             │
-│ 4. Click "Load unpacked" and select:                   │
-│    %LOCALAPPDATA%\LocalActivityTracker\extension       │
-│    (or <repo>\src\ChromeExtension\dist during dev)     │
-│ 5. Click the extension toolbar icon.                   │
-│ 6. Verify the badge shows "CONNECTED" with a UUID.     │
-│ 7. Repeat for every Chrome profile you use.            │
-└────────────────────────────────────────────────────────┘
-```
-
-Each Chrome profile generates an independent UUIDv4 stored in `chrome.storage.local`, spawning its own Native Messaging bridge and multiplexing over dedicated Named Pipe channels into the Coordinator.
+> [!TIP]
+> **Multi-Profile Workstations:** If you use multiple Chrome profiles (e.g., *Work*, *Personal*, *Client Admin*), open each profile window, navigate to `chrome://extensions/`, click **Load unpacked**, and select the same folder. Each profile automatically receives its own isolated UUID and streams activity into the same local dashboard.
 
 ---
+
+### 5. Step 4 (Multi-Machine Note): Registering New Extension IDs
+
+When loading unpacked extensions on different computers or Windows user accounts, Chrome may compute a different 32-character extension ID.
+
+- Look at the extension card at `chrome://extensions/` for the 32-character **ID** (e.g. `lbdhlaapcbkigemlepkcmdhmdjincjoc`).
+- If the ID matches the defaults, **you're done!**
+- If Chrome assigns a different ID on that specific computer, simply run this one-line command to register it in the native messaging manifests:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\scripts\fix-native-host.ps1 -ExtensionId "<YourExtensionID>"
+  ```
+- Click the reload icon (↻) on the extension card in `chrome://extensions/` — the badge will immediately turn green and show **CONNECTED**.
+
+---
+
+### 6. Step 5: Verify Live Tracking & Dashboard
+
+1. **Open the Localhost Dashboard:**
+   Visit 👉 **[http://127.0.0.1:48120](http://127.0.0.1:48120)**
+   - View live overview metrics, active tab viewing durations, non-Chrome application usage, and scheduled screenshots.
+   - The dashboard auto-refreshes every 5 seconds.
+2. **Run Health Verification Script:**
+   Verify your active database sessions from PowerShell at any time:
+   ```powershell
+   powershell -File .\scripts\check-activity.ps1
+   ```
+
+---
+
+### 🔄 Daily Operation & Auto-Start (Zero Maintenance)
+
+| Scenario | Behavior | Action Required? |
+| :--- | :--- | :--- |
+| **PC Starts / Reboots** | Windows executes `shell:startup\LocalActivityTracker.lnk` on login. Coordinator starts automatically. | **None** — Fully automated |
+| **Chrome Opens** | Chrome automatically spawns `NativeHost.exe` on demand and connects to Coordinator via Named Pipe. | **None** — Fully automated |
+| **Screen Locks (`Win+L`)** | Coordinator detects `WTS_SESSION_LOCK`, pauses tracking, and closes active sessions. | **None** — Resumes on unlock |
+| **PC Enters Sleep / Wake** | Power notifications pause tracking during sleep and auto-resume on wake with initial focus check. | **None** — Handled cleanly |
+| **Unexpected Crash / Power Cut** | On next boot, Coordinator runs startup crash reconciliation (`RECOVERED_AFTER_CRASH`). | **None** — Zero database corruption |
+
+You **never** need to start or restart the server manually on a daily basis.
+
+---
+
+### 🛠️ Script Reference
+
+All lifecycle scripts are located in the `scripts\` directory:
+
+| Script | Purpose |
+| :--- | :--- |
+| `.\scripts\install.ps1` | Full installer: builds binaries, registers registry keys, sets up auto-start, and stages assets. |
+| `.\scripts\start.ps1` | Manually launches `Coordinator.exe` in the interactive desktop session. |
+| `.\scripts\stop.ps1` | Gracefully terminates any running Coordinator and NativeHost processes. |
+| `.\scripts\check-activity.ps1` | Displays live database stats, active URLs, domains, and profile connection statuses. |
+| `.\scripts\fix-native-host.ps1` | Re-publishes self-contained NativeHost and updates registry manifests for custom extension IDs. |
+| `.\scripts\harden-storage-acl.ps1` | Restricts storage directory permissions strictly to the current Windows user and `SYSTEM`. |
+| `.\scripts\uninstall.ps1` | Unregisters registry keys, deletes startup shortcut, and removes binaries (add `-PurgeData` to wipe database). |
+| `.\build.ps1` | Full solution clean, compile, TypeScript bundle, and test runner (**115 tests**). |
 
 ## 🏛️ System Architecture
 
@@ -269,7 +318,7 @@ PRAGMA busy_timeout = 5000;
 
 ## 🧪 Automated Testing & Verification
 
-The repository includes a test suite with **114 automated unit, integration, and end-to-end tests**:
+The repository includes a test suite with **115 automated unit, integration, and end-to-end tests**:
 
 ```powershell
 # Run the complete test suite in Release configuration
@@ -280,7 +329,7 @@ dotnet test .\tests\LocalActivityTracker.Tests\LocalActivityTracker.Tests.csproj
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed: 0, Passed: 114, Skipped: 0, Total: 114, Duration: 2 s - LocalActivityTracker.Tests.dll (net8.0)
+Passed!  - Failed: 0, Passed: 115, Skipped: 0, Total: 115, Duration: 2 s - LocalActivityTracker.Tests.dll (net8.0)
 ```
 
 ### Test Coverage Highlights
@@ -305,6 +354,9 @@ Passed!  - Failed: 0, Passed: 114, Skipped: 0, Total: 114, Duration: 2 s - Local
 │   ├── uninstall.ps1               # Clean service uninstaller (-PurgeData option)
 │   ├── start.ps1                   # Background Coordinator launcher
 │   ├── stop.ps1                    # Graceful Coordinator shutdown
+│   ├── check-activity.ps1          # Live tracking health check & statistics
+│   ├── fix-native-host.ps1         # Native Messaging host manifest & ID registration
+│   ├── dump-db.ps1                 # SQLite database query & inspection tool
 │   └── harden-storage-acl.ps1      # NTFS permissions hardening script
 ├── src/
 │   ├── ChromeExtension/            # TypeScript Manifest V3 extension
