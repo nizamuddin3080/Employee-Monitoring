@@ -86,7 +86,8 @@ $manifestAgentContent = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://*/"
+    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
+    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
   ]
 }
 "@
@@ -104,7 +105,8 @@ $manifestNativeContent = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://*/"
+    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
+    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
   ]
 }
 "@

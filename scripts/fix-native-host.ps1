@@ -53,7 +53,8 @@ $manifestAgentJson = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://*/"
+    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
+    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
   ]
 }
 "@
@@ -68,7 +69,8 @@ $manifestNativeHostJson = @"
   "path": "$hostExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://*/"
+    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
+    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
   ]
 }
 "@

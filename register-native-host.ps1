@@ -39,7 +39,8 @@ $manifestJson = @"
   "path": "$escapedExePath",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://*/"
+    "chrome-extension://lbdhlaapcbkigemlepkcmdhmdjincjoc/",
+    "chrome-extension://aaimpoinflcehfkndfccceceaafcmnoc/"
   ]
 }
 "@
